@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain — Processing</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">🧠 Brain</a>
+    <span class="brand-sub">{{ job.label[:50] }}</span>
+  </header>
+
+  <main id="job-main">
+
+    {% if job.status == 'done' %}
+
+    <div class="result-card">
+      <div class="tier tier-{{ job.result.tier }}">Tier {{ job.result.tier }}</div>
+      <h1>{{ job.result.title }}</h1>
+      <p class="tldr">{{ job.result.tldr }}</p>
+
+      {% if job.result.key_points %}
+      <ul class="key-points">
+        {% for p in job.result.key_points %}
+        <li>{{ p }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="tags">
+        {% for tag in job.result.tags %}
+        <span class="tag">{{ tag }}</span>
+        {% endfor %}
+      </div>
+
+      <div class="result-links">
+        <a href="{{ job.result.outline_url }}" target="_blank" class="btn-primary">Open in Outline →</a>
+        <a href="{{ job.result.inbox_url }}"   target="_blank" class="btn-secondary">View raw</a>
+      </div>
+    </div>
+
+    {% elif job.status == 'error' %}
+
+    <div class="error-card">
+      <h2>Something went wrong</h2>
+      <p>{{ job.error }}</p>
+      <a href="/" class="btn-secondary">← Try again</a>
+    </div>
+
+    {% else %}
+
+    <div class="progress-card" id="progress">
+      <div class="spinner"></div>
+      <h2>Processing</h2>
+      <ul class="steps" id="steps">
+        {% for s in job.steps %}
+        <li class="step-done">{{ s }}</li>
+        {% endfor %}
+        {% if job.status != 'done' and job.status != 'error' %}
+        <li class="step-active" id="current-step">
+          {{ job.steps[-1] if job.steps else 'Starting…' }}
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    {% endif %}
+
+  </main>
+
+  {% if job.status not in ['done', 'error'] %}
+  <script>
+    async function poll() {
+      const r = await fetch('/api/job/{{ job.id }}');
+      const data = await r.json();
+
+      if (data.status === 'done' || data.status === 'error') {
+        location.reload();
+        return;
+      }
+
+      const list = document.getElementById('steps');
+      list.innerHTML = data.steps.map((s, i) =>
+        i === data.steps.length - 1
+          ? `<li class="step-active">${s}</li>`
+          : `<li class="step-done">${s}</li>`
+      ).join('');
+
+      setTimeout(poll, 1500);
+    }
+    setTimeout(poll, 1500);
+  </script>
+  {% endif %}
+</body>
+</html>

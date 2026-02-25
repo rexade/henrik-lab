@@ -1,0 +1,48 @@
+- Services:
+    - Brain:
+        href: https://brain.rexthedog.space
+        description: Dump anything, AI files it
+        icon: mdi-brain
+        siteMonitor: https://brain.rexthedog.space
+
+    - Outline:
+        href: https://notes.rexthedog.space
+        description: Notes & knowledge base
+        icon: outline.png
+        siteMonitor: https://notes.rexthedog.space
+
+    - Portainer:
+        href: https://portainer.rexthedog.space
+        description: Docker management
+        icon: portainer.png
+        siteMonitor: https://portainer.rexthedog.space
+
+    - Uptime Kuma:
+        href: https://status.rexthedog.space
+        description: Service monitoring
+        icon: uptime-kuma.png
+        siteMonitor: https://status.rexthedog.space
+
+    - Vaultwarden:
+        href: https://vault.rexthedog.space
+        description: Password manager
+        icon: vaultwarden.png
+        siteMonitor: https://vault.rexthedog.space
+
+    - Files:
+        href: https://files.rexthedog.space
+        description: File storage
+        icon: filebrowser.png
+        siteMonitor: https://files.rexthedog.space
+
+    - Terminal:
+        href: https://terminal.rexthedog.space/wetty
+        description: SSH in the browser
+        icon: mdi-console
+        siteMonitor: https://terminal.rexthedog.space
+
+    - Receptbok:
+        href: https://recipes.rexthedog.space
+        description: Recept med svenska mått
+        icon: mdi-chef-hat
+        siteMonitor: http://recipes:8000

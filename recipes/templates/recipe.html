@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }}{% endblock %}
+{% block content %}
+
+<article class="recipe-detail"
+  x-data="{ cooking: false, checkedIngs: {}, doneSteps: {} }"
+  :class="{ 'cooking-mode': cooking }">
+
+  <div class="recipe-header">
+    <div class="recipe-header-text">
+      <div class="breadcrumb-row">
+        <div class="breadcrumb"><a href="/">← Alla recept</a></div>
+        <div class="recipe-toolbar no-print">
+          <button class="btn"
+                  :class="cooking ? 'btn-cooking-active' : 'btn-secondary'"
+                  @click="cooking = !cooking; checkedIngs = {}; doneSteps = {}">
+            <span x-text="cooking ? '🍳 Avsluta kockläge' : '🍳 Kockläge'"></span>
+          </button>
+          <button class="btn btn-secondary" onclick="window.print()" title="Skriv ut">🖨️</button>
+        </div>
+      </div>
+      <h1>{{ recipe.title }}</h1>
+      {% if recipe.category %}
+      <span class="badge">{{ recipe.category }}</span>
+      {% endif %}
+      {% if recipe.description %}
+      <p class="recipe-description">{{ recipe.description }}</p>
+      {% endif %}
+      <div class="recipe-meta">
+        {% if recipe.cook_time %}<div class="meta-item">⏱ <strong>{{ recipe.cook_time }}</strong></div>{% endif %}
+        {% if recipe.servings %}<div class="meta-item">👤 <strong>{{ recipe.servings }} portioner</strong></div>{% endif %}
+      </div>
+    </div>
+    {% if recipe.image %}
+    <img src="/uploads/{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
+    {% endif %}
+  </div>
+
+  {% if recipe.ingredients %}
+  <section class="recipe-section">
+    <h2>Ingredienser
+      <span class="section-hint" x-show="cooking" x-cloak>— klicka för att bocka av</span>
+    </h2>
+    <ul class="ingredient-list">
+      {% for ing in recipe.ingredients %}
+      <li
+        :class="{ 'ing-checked': checkedIngs[{{ loop.index0 }}] }"
+        @click="cooking && (checkedIngs[{{ loop.index0 }}] = !checkedIngs[{{ loop.index0 }}])">
+        <span class="cook-check" x-show="cooking" x-cloak
+              :class="{ 'cook-check-done': checkedIngs[{{ loop.index0 }}] }"></span>
+        <span class="ing-amount">{{ ing.amount }} {{ ing.unit }}</span>
+        <span class="ing-name">{{ ing.name }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if recipe.steps %}
+  <section class="recipe-section">
+    <h2>Tillagning
+      <span class="step-progress" x-show="cooking" x-cloak>
+        — <span x-text="Object.values(doneSteps).filter(Boolean).length"></span>/{{ recipe.steps | length }} klara
+      </span>
+    </h2>
+    <ol class="step-list">
+      {% for step in recipe.steps %}
+      <li
+        :class="{ 'step-done': doneSteps[{{ loop.index0 }}] }"
+        @click="cooking && (doneSteps[{{ loop.index0 }}] = !doneSteps[{{ loop.index0 }}])">
+        {{ step }}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  <div class="recipe-actions no-print">
+    <a href="/edit/{{ recipe.id }}" class="btn btn-secondary">Redigera</a>
+    <a href="/delete/{{ recipe.id }}" class="btn btn-danger">Ta bort</a>
+  </div>
+
+</article>
+
+{% endblock %}

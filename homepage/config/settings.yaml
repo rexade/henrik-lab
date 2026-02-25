@@ -1,0 +1,19 @@
+title: Henrik's Lab
+favicon: https://home.rexthedog.space/favicon.ico
+
+theme: dark
+color: slate
+
+headerStyle: clean
+cardBlur: sm
+
+useEqualHeights: true
+statusStyle: dot
+
+iconStyle: theme
+
+layout:
+  Services:
+    style: row
+    columns: 4
+    useEqualHeights: true
