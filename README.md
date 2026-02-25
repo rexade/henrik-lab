@@ -3,7 +3,6 @@
 A self-hosted personal dashboard and knowledge management system running on a Raspberry Pi. All services are containerised with Docker Compose and exposed securely to the internet via a Cloudflare Tunnel — no open ports required.
 
 <img width="2412" height="1092" alt="image" src="https://github.com/user-attachments/assets/754b6ae8-a11d-4b39-9787-ad7ed94c2844" />
-<img width="2412" height="1092" alt="image" src="https://github.com/user-attachments/assets/754b6ae8-a11d-4b39-9787-ad7ed94c2844" />
 
 
 Live at **[home.rexthedog.space](https://home.rexthedog.space)**
