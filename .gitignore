@@ -1,9 +1,15 @@
 # Secrets
 .env
 *.env
+*.pem
+*.json.key
 
 # Claude
 .claude/
+
+# Cloudflare tunnel credentials
+cloudflare/*.json
+cloudflare/*.pem
 
 # Python
 __pycache__/
@@ -25,3 +31,7 @@ logs/
 .vscode/
 .idea/
 *.swp
+
+# OS
+.DS_Store
+Thumbs.db
