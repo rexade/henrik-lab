@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{% if recipe %}Redigera recept{% else %}Nytt recept{% endif %}{% endblock %}
+{% block content %}
+
+<div class="form-page">
+  <div class="breadcrumb">
+    {% if recipe %}
+    <a href="/recipe/{{ recipe.id }}">← Tillbaka till receptet</a>
+    {% else %}
+    <a href="/">← Alla recept</a>
+    {% endif %}
+  </div>
+  <h1>{% if recipe %}Redigera recept{% else %}Nytt recept{% endif %}</h1>
+
+  <form method="post" enctype="multipart/form-data" class="recipe-form">
+
+    <div class="form-section">
+      <h2>Grundinfo</h2>
+
+      <div class="form-group">
+        <label for="title">Receptnamn *</label>
+        <input type="text" id="title" name="title"
+               value="{{ recipe.title if recipe else '' }}"
+               required class="form-control" placeholder="t.ex. Pannkakor">
+      </div>
+
+      <div class="form-group">
+        <label for="description">Beskrivning</label>
+        <textarea id="description" name="description" class="form-control" rows="3"
+                  placeholder="Kort beskrivning av receptet...">{{ recipe.description if recipe else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category">Kategori</label>
+          <select id="category" name="category" class="form-control">
+            <option value="">Välj kategori</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}"{% if recipe and recipe.category == cat %} selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="servings">Portioner</label>
+          <input type="text" id="servings" name="servings"
+                 value="{{ recipe.servings if recipe else '' }}"
+                 class="form-control" placeholder="t.ex. 4">
+        </div>
+        <div class="form-group">
+          <label for="cook_time">Tillagningstid</label>
+          <input type="text" id="cook_time" name="cook_time"
+                 value="{{ recipe.cook_time if recipe else '' }}"
+                 class="form-control" placeholder="t.ex. 30 min">
+        </div>
+      </div>
+
+      <div class="form-group" x-data="{ preview: null }">
+        <label for="image">Foto</label>
+        {% if recipe and recipe.image %}
+        <div class="current-image">
+          <img src="/uploads/{{ recipe.image }}" alt="Nuvarande bild">
+          <p>Ladda upp en ny bild för att ersätta den nuvarande.</p>
+        </div>
+        {% endif %}
+        <input type="file" id="image" name="image" class="form-control" accept="image/*"
+               @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null">
+        <div x-show="preview" x-cloak class="img-preview-wrap">
+          <img :src="preview" class="img-preview-thumb" alt="Förhandsgranskning">
+          <p class="text-muted" style="font-size:.8rem; margin-top:.3rem">Ny bild vald</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Ingredienser</h2>
+      <div id="ingredients-container">
+        {% if recipe and recipe.ingredients %}
+          {% for ing in recipe.ingredients %}
+          <div class="ingredient-row">
+            <input type="text" name="ingredient_amounts" value="{{ ing.amount }}"
+                   class="form-control" placeholder="Mängd">
+            <select name="ingredient_units" class="form-control">
+              {% for unit in units %}
+              <option value="{{ unit }}"{% if ing.unit == unit %} selected{% endif %}>{{ unit }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="ingredient_names" value="{{ ing.name }}"
+                   class="form-control" placeholder="Ingrediens">
+            <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="ingredient-row">
+            <input type="text" name="ingredient_amounts" class="form-control" placeholder="Mängd">
+            <select name="ingredient_units" class="form-control">
+              {% for unit in units %}
+              <option value="{{ unit }}">{{ unit }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="ingredient_names" class="form-control" placeholder="Ingrediens">
+            <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+          </div>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-secondary add-btn" onclick="addIngredient()">+ Lägg till ingrediens</button>
+    </div>
+
+    <div class="form-section">
+      <h2>Tillagning</h2>
+      <div id="steps-container">
+        {% if recipe and recipe.steps %}
+          {% for step in recipe.steps %}
+          <div class="step-row">
+            <span class="step-num"></span>
+            <textarea name="steps" class="form-control step-text" rows="2"
+                      placeholder="Beskriv steget...">{{ step }}</textarea>
+            <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="step-row">
+            <span class="step-num"></span>
+            <textarea name="steps" class="form-control step-text" rows="2"
+                      placeholder="Beskriv steget..."></textarea>
+            <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+          </div>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-secondary add-btn" onclick="addStep()">+ Lägg till steg</button>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Spara recept</button>
+      {% if recipe %}
+      <a href="/recipe/{{ recipe.id }}" class="btn btn-secondary">Avbryt</a>
+      {% else %}
+      <a href="/" class="btn btn-secondary">Avbryt</a>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+<script>
+const UNITS = {{ units | tojson }};
+
+function unitOptions(selected) {
+  return UNITS.map(u => `<option value="${u}"${u === selected ? ' selected' : ''}>${u}</option>`).join('');
+}
+
+function addIngredient() {
+  const row = document.createElement('div');
+  row.className = 'ingredient-row';
+  row.innerHTML = `
+    <input type="text" name="ingredient_amounts" class="form-control" placeholder="Mängd">
+    <select name="ingredient_units" class="form-control">${unitOptions('dl')}</select>
+    <input type="text" name="ingredient_names" class="form-control" placeholder="Ingrediens">
+    <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+  `;
+  document.getElementById('ingredients-container').appendChild(row);
+  row.querySelector('input[name="ingredient_names"]').focus();
+}
+
+function addStep() {
+  const row = document.createElement('div');
+  row.className = 'step-row';
+  row.innerHTML = `
+    <span class="step-num"></span>
+    <textarea name="steps" class="form-control step-text" rows="2" placeholder="Beskriv steget..."></textarea>
+    <button type="button" class="btn btn-icon" onclick="removeRow(this)" title="Ta bort">✕</button>
+  `;
+  document.getElementById('steps-container').appendChild(row);
+  row.querySelector('textarea').focus();
+}
+
+function removeRow(btn) {
+  btn.closest('.ingredient-row, .step-row').remove();
+}
+</script>
+
+{% endblock %}

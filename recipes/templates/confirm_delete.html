@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Ta bort – {{ recipe.title }}{% endblock %}
+{% block content %}
+
+<div class="confirm-page">
+  <h1>Ta bort recept</h1>
+  <p>Är du säker på att du vill ta bort <strong>{{ recipe.title }}</strong>?</p>
+  <p class="text-muted">Det går inte att ångra denna åtgärd.</p>
+  <div class="confirm-actions">
+    <form method="post" action="/delete/{{ recipe.id }}" style="display:inline">
+      <button type="submit" class="btn btn-danger">Ja, ta bort</button>
+    </form>
+    <a href="/recipe/{{ recipe.id }}" class="btn btn-secondary">Avbryt</a>
+  </div>
+</div>
+
+{% endblock %}

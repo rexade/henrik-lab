@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }} – Receptboken{% endblock %}
+{% block content %}
+
+<div class="recipe-view">
+  <div class="recipe-header">
+    <div>
+      <span class="category-badge">{{ recipe.category }}</span>
+      <h1>{{ recipe.title }}</h1>
+      {% if recipe.description %}
+      <p class="recipe-desc">{{ recipe.description }}</p>
+      {% endif %}
+      <div class="recipe-meta">{{ recipe.servings }} portioner</div>
+    </div>
+    <div class="recipe-actions">
+      <a href="/edit/{{ recipe.id }}" class="btn btn-secondary">✏️ Redigera</a>
+      <form method="post" action="/delete/{{ recipe.id }}" onsubmit="return confirm('Ta bort {{ recipe.title }}?')">
+        <button type="submit" class="btn btn-danger">🗑️ Ta bort</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="recipe-body">
+    {% if ingredients %}
+    <section class="section">
+      <h2>Ingredienser</h2>
+      <ul class="ingredient-list">
+        {% for ing in ingredients %}
+        <li>
+          <span class="ing-amount">{{ ing.amount }} {{ ing.unit }}</span>
+          <span class="ing-name">{{ ing.name }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if steps %}
+    <section class="section">
+      <h2>Gör så här</h2>
+      <ol class="step-list">
+        {% for step in steps %}
+        <li>{{ step.description }}</li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
+  </div>
+
+  <a href="/" class="btn btn-ghost back-link">← Alla recept</a>
+</div>
+
+{% endblock %}

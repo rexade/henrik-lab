@@ -1,0 +1,31 @@
+- greeting:
+    text_size: 2xl
+    text: "Henrik's Lab"
+
+- datetime:
+    text_size: l
+    format:
+      dateStyle: long
+      timeStyle: short
+      hour12: false
+    locale: sv
+
+- openmeteo:
+    label: Gothenburg
+    latitude: 57.7089
+    longitude: 11.9746
+    units: metric
+    cache: 5
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+    label: Raspberry Pi
+    expanded: true
+    units: metric
+
+- search:
+    provider: duckduckgo
+    target: _blank
+    focus: false

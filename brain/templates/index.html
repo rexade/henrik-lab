@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="brand">🧠 Brain</span>
+    <span class="brand-sub">dump anything</span>
+  </header>
+
+  <main>
+    <form method="post" action="/ingest" enctype="multipart/form-data" id="form">
+
+      <textarea name="text" id="text"
+        placeholder="Paste text, a URL, or just brain-dump whatever is on your mind…"
+        rows="6"></textarea>
+
+      <div class="file-row">
+        <label class="file-label" for="file">
+          <span id="file-text">📎 Attach file (PDF, image, .txt)</span>
+          <input type="file" id="file" name="file"
+                 accept=".pdf,.txt,.md,image/*"
+                 onchange="document.getElementById('file-text').textContent = this.files[0]?.name || '📎 Attach file'">
+        </label>
+      </div>
+
+      <button type="submit" id="submit-btn">Ingest →</button>
+    </form>
+
+    {% if recent %}
+    <section class="recent">
+      <h2>Recent</h2>
+      {% for job in recent %}
+      <a href="/job/{{ job.id }}" class="job-row status-{{ job.status }}">
+        <span class="job-label">{{ job.label }}</span>
+        <span class="job-status">
+          {% if job.status == 'done' %}✅{% elif job.status == 'error' %}❌{% else %}⏳{% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </main>
+
+  <script>
+    document.getElementById('form').addEventListener('submit', function() {
+      const btn = document.getElementById('submit-btn');
+      btn.textContent = 'Processing…';
+      btn.disabled = true;
+    });
+  </script>
+</body>
+</html>

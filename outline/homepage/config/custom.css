@@ -1,0 +1,163 @@
+/* ── Anchor Navy theme ── */
+/* #344a5f  navy surface                */
+/* #2a94d6  blue accent                 */
+/* #F0F1F2  primary text                */
+/* #FFFFFF  headings / bright text      */
+
+/* ── Background ── */
+html,
+body,
+#page_wrapper,
+#wrapper,
+main,
+div[class*="bg-"] {
+  background-color: #25343F !important;
+}
+
+#page_wrapper,
+#wrapper {
+  background-image: none !important;
+  min-height: 100vh;
+}
+
+/* ── Typography ── */
+* {
+  letter-spacing: 0.02em;
+}
+
+/* ── Greeting ── */
+#greeting {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* ── Section headings ── */
+#services h2,
+#bookmarks h2 {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(42, 148, 214, 0.70) !important;
+}
+
+/* ── Service cards ── */
+#services .service-card {
+  background: rgba(52, 74, 95, 0.55) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(52, 74, 95, 0.90) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.40);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#services .service-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(42, 148, 214, 0.55) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(42, 148, 214, 0.20);
+}
+
+/* Icon glow on hover */
+#services .service-card img,
+#services .service-card svg {
+  transition: filter 0.2s ease;
+}
+
+#services .service-card:hover img,
+#services .service-card:hover svg {
+  filter: drop-shadow(0 0 8px rgba(42, 148, 214, 0.55));
+}
+
+/* Service name */
+#services .service-card .service-name,
+#services .service-card [class*="service-name"] {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Service description */
+#services .service-card .service-desc,
+#services .service-card [class*="service-desc"] {
+  color: rgba(240, 241, 242, 0.60);
+  font-size: 0.78rem;
+}
+
+/* ── Widget cards ── */
+#information .widget-container,
+#widgets .widget-container {
+  background: rgba(52, 74, 95, 0.55) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(52, 74, 95, 0.90) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.40);
+}
+
+/* Widget text */
+#information .widget-container label,
+#information .widget-container [class*="label"] {
+  color: rgba(42, 148, 214, 0.70);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Resource bars */
+#resources [class*="progress"],
+#resources [class*="bar"] {
+  background: linear-gradient(90deg, #1a6fa3, #2a94d6) !important;
+  border-radius: 99px;
+}
+
+/* ── Search bar ── */
+#search input {
+  border-radius: 12px;
+  border: 1px solid rgba(52, 74, 95, 0.90);
+  background: rgba(52, 74, 95, 0.50);
+  backdrop-filter: blur(12px);
+  color: #f0f1f2;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#search input:focus {
+  border-color: rgba(42, 148, 214, 0.60);
+  box-shadow: 0 0 0 3px rgba(42, 148, 214, 0.12);
+  outline: none;
+}
+
+#search input::placeholder {
+  color: rgba(240, 241, 242, 0.35);
+}
+
+/* ── Status dot ── */
+.status-dot {
+  width: 7px;
+  height: 7px;
+}
+
+/* ── Datetime ── */
+#datetime {
+  color: rgba(240, 241, 242, 0.75);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 148, 214, 0.30);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 148, 214, 0.60);
+}

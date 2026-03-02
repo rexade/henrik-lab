@@ -1,0 +1,274 @@
+:root {
+  --bg:       #0e0e0e;
+  --surface:  #1a1a1a;
+  --border:   #2a2a2a;
+  --text:     #f0f0f0;
+  --muted:    #888;
+  --accent:   #e87c3a;
+  --accent-h: #d06828;
+  --green:    #3dd68c;
+  --red:      #f87171;
+  --radius:   10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.brand-sub {
+  font-size: .8rem;
+  color: var(--muted);
+}
+
+/* ── Main ── */
+main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+/* ── Form ── */
+textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 1rem;
+  resize: vertical;
+  transition: border-color .15s;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea::placeholder { color: var(--muted); }
+
+.file-row { margin: .75rem 0; }
+
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  font-size: .875rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.file-label:hover { border-color: var(--accent); color: var(--accent); }
+.file-label input { display: none; }
+
+#submit-btn {
+  width: 100%;
+  padding: .85rem;
+  margin-top: .5rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+#submit-btn:hover    { background: var(--accent-h); }
+#submit-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── Recent jobs ── */
+.recent { margin-top: 2.5rem; }
+.recent h2 {
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .75rem;
+}
+
+.job-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem .75rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: .4rem;
+  text-decoration: none;
+  color: var(--text);
+  font-size: .875rem;
+  border: 1px solid var(--border);
+  transition: border-color .15s;
+}
+.job-row:hover { border-color: var(--accent); }
+.job-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-status { margin-left: .75rem; flex-shrink: 0; }
+
+/* ── Progress ── */
+.progress-card {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: 0 auto 1.5rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1.25rem;
+  color: var(--muted);
+}
+
+.steps {
+  list-style: none;
+  text-align: left;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.steps li {
+  padding: .4rem 0 .4rem 1.5rem;
+  position: relative;
+  font-size: .875rem;
+  color: var(--muted);
+}
+.steps li::before {
+  content: '○';
+  position: absolute;
+  left: 0;
+}
+.step-done { color: var(--text) !important; }
+.step-done::before { content: '✓' !important; color: var(--green); }
+.step-active { color: var(--accent) !important; }
+.step-active::before { content: '→' !important; color: var(--accent); }
+
+/* ── Result card ── */
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+}
+
+.tier {
+  display: inline-block;
+  padding: .2rem .65rem;
+  border-radius: 20px;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  margin-bottom: .75rem;
+}
+.tier-A { background: rgba(61, 214, 140, .15); color: var(--green); }
+.tier-B { background: rgba(232, 124, 58, .15); color: var(--accent); }
+.tier-C { background: rgba(248, 113, 113, .15); color: var(--red); }
+
+.result-card h1 {
+  font-size: 1.4rem;
+  letter-spacing: -.02em;
+  margin-bottom: .75rem;
+}
+
+.tldr {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+}
+
+.key-points {
+  padding-left: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.key-points li {
+  font-size: .875rem;
+  line-height: 1.7;
+  color: #ccc;
+  margin-bottom: .25rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-bottom: 1.5rem;
+}
+.tag {
+  font-size: .75rem;
+  padding: .2rem .6rem;
+  background: var(--border);
+  border-radius: 20px;
+  color: var(--muted);
+}
+
+.result-links {
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary, .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: .6rem 1.1rem;
+  border-radius: var(--radius);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.btn-primary  { background: var(--accent); color: #fff; }
+.btn-primary:hover  { opacity: .85; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn-secondary:hover { opacity: .75; }
+
+/* ── Error card ── */
+.error-card {
+  background: var(--surface);
+  border: 1px solid #3d1a1a;
+  border-radius: var(--radius);
+  padding: 1.75rem;
+}
+.error-card h2 { color: var(--red); margin-bottom: .75rem; }
+.error-card p  { color: var(--muted); font-size: .875rem; margin-bottom: 1.25rem; }
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  header  { padding: 1rem; }
+  main    { padding: 1.25rem 1rem 3rem; }
+  .result-links { flex-direction: column; }
+  .btn-primary, .btn-secondary { justify-content: center; }
+}

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    /* Alpine transition classes */
+    .dropdown-enter       { transition: opacity 150ms ease-out, transform 150ms ease-out; }
+    .dropdown-enter-start { opacity: 0; transform: translateY(-6px); }
+    .dropdown-enter-end   { opacity: 1; transform: translateY(0); }
+    .dropdown-leave       { transition: opacity 100ms ease-in; }
+    .dropdown-leave-start { opacity: 1; }
+    .dropdown-leave-end   { opacity: 0; }
+
+    .panel-enter       { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+    .panel-enter-start { opacity: 0; transform: scale(0.94) translateY(12px); }
+    .panel-enter-end   { opacity: 1; transform: scale(1) translateY(0); }
+    .panel-leave       { transition: opacity 150ms ease-in, transform 150ms ease-in; }
+    .panel-leave-start { opacity: 1; transform: scale(1) translateY(0); }
+    .panel-leave-end   { opacity: 0; transform: scale(0.96) translateY(8px); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { display: inline-block; animation: spin 0.8s linear infinite; }
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-[#0f1117] text-slate-200 min-h-screen antialiased">
+
+<div class="max-w-6xl mx-auto px-6 py-8" x-data="tracker()" x-init="init()">
+
+  <!-- ── Header ────────────────────────────────────────────── -->
+  <header class="mb-8 space-y-3">
+
+    <!-- Row 1: title + refresh -->
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-bold tracking-tight">📺 Anime Tracker</h1>
+      <button @click="refreshAll()" :disabled="refreshing"
+              class="text-slate-500 hover:text-slate-200 border border-[#2d3148] hover:border-indigo-500 rounded-lg px-3 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
+        <span :class="{ spinning: refreshing }">↻</span>
+      </button>
+    </div>
+
+    <!-- Row 2: search + filter pills -->
+    <div class="flex items-center gap-3 flex-wrap">
+
+      <!-- Search -->
+      <div class="relative" x-ref="searchWrap">
+        <input type="text"
+               x-model="query"
+               @input.debounce.300ms="doSearch()"
+               @keyup.escape="closeSearch()"
+               @keyup.enter="results.length && doFollow(results[focused])"
+               @keyup.arrow-down.prevent="focused = Math.min(focused + 1, results.length - 1)"
+               @keyup.arrow-up.prevent="focused = Math.max(focused - 1, 0)"
+               placeholder="Search to follow…  (/)"
+               autocomplete="off" spellcheck="false"
+               x-ref="searchInput"
+               class="w-72 bg-[#1a1d2e] border border-[#2d3148] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-lg px-4 py-2 text-sm placeholder-slate-600 outline-none transition">
+
+        <!-- Dropdown -->
+        <div class="absolute top-full left-0 right-0 mt-1.5 bg-[#1a1d2e] border border-[#2d3148] rounded-xl shadow-2xl overflow-hidden z-50"
+             x-show="results.length > 0 && query.length >= 2"
+             x-transition:enter="dropdown-enter"
+             x-transition:enter-start="dropdown-enter-start"
+             x-transition:enter-end="dropdown-enter-end"
+             x-transition:leave="dropdown-leave"
+             x-transition:leave-start="dropdown-leave-start"
+             x-transition:leave-end="dropdown-leave-end"
+             @click.outside="closeSearch()"
+             style="display:none">
+          <template x-for="(anime, i) in results" :key="anime.id">
+            <div class="flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors"
+                 :class="i === focused ? 'bg-[#252840]' : 'hover:bg-[#252840]'"
+                 @click="doFollow(anime)" @mouseenter="focused = i">
+              <img :src="anime.coverImage.medium"
+                   class="w-9 h-12 object-cover rounded flex-shrink-0 bg-[#252840]">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate" x-text="anime.title.english || anime.title.romaji"></p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  <span x-text="statusDot(anime.status)"></span>
+                  <span x-text="' ' + (anime.seasonYear || '')"></span>
+                </p>
+              </div>
+              <span class="text-indigo-400 font-bold text-lg flex-shrink-0">＋</span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Filter pills -->
+      <div class="flex gap-1.5">
+        <template x-for="f in filters" :key="f.value">
+          <button @click="activeFilter = f.value" x-text="f.label"
+                  :class="activeFilter === f.value
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'bg-transparent border-[#2d3148] text-slate-500 hover:text-slate-200 hover:border-slate-500'"
+                  class="px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer">
+          </button>
+        </template>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ── Card grid ──────────────────────────────────────────── -->
+  <main>
+    <template x-if="visibleShows.length > 0">
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+        <template x-for="show in visibleShows" :key="show.anilist_id">
+          <div class="group relative bg-[#1a1d2e] border border-[#2d3148] rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-200"
+               @click="openDetail(show)">
+
+            <img :src="show.cover" :alt="show.title"
+                 class="w-full aspect-[2/3] object-cover block bg-[#252840]" loading="lazy">
+
+            <button @click.stop="doUnfollow(show.anilist_id)"
+                    class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/70 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm cursor-pointer">
+              ✕
+            </button>
+
+            <div class="p-2.5 pb-3">
+              <h2 class="text-xs font-semibold leading-snug line-clamp-2 mb-1" x-text="show.title"></h2>
+
+              <template x-if="show.next_episode">
+                <div>
+                  <div class="flex items-baseline gap-1 flex-wrap mt-1">
+                    <span class="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
+                          x-text="'Ep ' + show.next_episode.episode"></span>
+                    <span class="text-[10px] text-slate-600"
+                          x-text="fmtDate(show.next_episode.airingAt)"></span>
+                  </div>
+                  <p class="text-xs font-semibold text-indigo-300 mt-0.5"
+                     x-text="fmtCountdown(show.next_episode.airingAt)"></p>
+                </div>
+              </template>
+
+              <template x-if="!show.next_episode">
+                <div class="mt-1 space-y-0.5">
+                  <p class="text-xs font-medium"
+                     :class="{
+                       'text-emerald-400': show.status === 'RELEASING',
+                       'text-slate-600':   show.status === 'FINISHED',
+                       'text-sky-400':     show.status === 'NOT_YET_RELEASED'
+                     }"
+                     x-text="statusLabel(show.status)"></p>
+                  <p x-show="show.start_date && show.status === 'NOT_YET_RELEASED'"
+                     class="text-xs font-semibold text-sky-400"
+                     x-text="fmtStartDate(show.start_date)"></p>
+                </div>
+              </template>
+
+              <p x-show="show.season && show.season_year"
+                 class="text-[10px] text-slate-700 uppercase tracking-wider mt-1.5"
+                 x-text="capitalize(show.season) + ' ' + show.season_year"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="follows.length === 0">
+      <div class="text-center py-24 text-slate-700">
+        <div class="text-5xl mb-4">📺</div>
+        <p class="text-base">No shows followed yet.</p>
+        <p class="text-sm mt-1 text-slate-800">Search above to start tracking.</p>
+      </div>
+    </template>
+
+    <template x-if="follows.length > 0 && visibleShows.length === 0">
+      <div class="text-center py-24 text-slate-700">
+        <div class="text-4xl mb-3">🔍</div>
+        <p>No shows match this filter.</p>
+      </div>
+    </template>
+  </main>
+
+  <!-- ── Detail modal ───────────────────────────────────────── -->
+  <template x-if="detail">
+    <div>
+      <div class="fixed inset-0 bg-black/65 backdrop-blur-sm z-40"
+           x-show="detail" x-transition.opacity.duration.200ms
+           @click="detail = null" style="display:none"></div>
+
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none"
+           x-show="detail"
+           x-trap.inert="!!detail"
+           @keyup.escape.window="detail = null"
+           x-transition:enter="panel-enter"
+           x-transition:enter-start="panel-enter-start"
+           x-transition:enter-end="panel-enter-end"
+           x-transition:leave="panel-leave"
+           x-transition:leave-start="panel-leave-start"
+           x-transition:leave-end="panel-leave-end"
+           role="dialog" aria-modal="true"
+           style="display:none">
+
+        <div class="relative bg-[#1a1d2e] border border-[#2d3148] rounded-2xl shadow-2xl max-w-md w-full flex gap-5 p-5 pointer-events-auto">
+
+          <button @click="detail = null"
+                  class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-[#252840] text-slate-400 hover:text-slate-200 text-xs transition-colors cursor-pointer">
+            ✕
+          </button>
+
+          <img :src="detail.cover" :alt="detail.title"
+               class="w-28 rounded-lg object-cover flex-shrink-0 bg-[#252840] self-start">
+
+          <div class="flex-1 min-w-0 pr-4">
+            <h2 class="font-bold text-base leading-snug" x-text="detail.title"></h2>
+            <p x-show="detail.title_romaji && detail.title_romaji !== detail.title"
+               class="text-xs text-slate-500 mt-0.5 mb-2" x-text="detail.title_romaji"></p>
+
+            <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 mb-3">
+              <span x-show="detail.season && detail.season_year"
+                    x-text="capitalize(detail.season) + ' ' + detail.season_year"></span>
+              <span x-show="detail.episodes" x-text="detail.episodes + ' eps'"></span>
+              <span :class="{
+                      'text-emerald-400': detail.status === 'RELEASING',
+                      'text-slate-500':   detail.status === 'FINISHED',
+                      'text-sky-400':     detail.status === 'NOT_YET_RELEASED'
+                    }"
+                    x-text="statusLabel(detail.status)"></span>
+            </div>
+
+            <template x-if="detail.next_episode">
+              <div class="flex items-center gap-2 flex-wrap mb-3">
+                <span class="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded"
+                      x-text="'Ep ' + detail.next_episode.episode"></span>
+                <span class="text-slate-400 text-xs" x-text="fmtDate(detail.next_episode.airingAt)"></span>
+                <strong class="text-indigo-300 text-xs" x-text="fmtCountdown(detail.next_episode.airingAt)"></strong>
+              </div>
+            </template>
+
+            <template x-if="!detail.next_episode && detail.start_date && detail.status === 'NOT_YET_RELEASED'">
+              <div class="flex items-center gap-2 text-xs mb-3">
+                <span class="text-slate-500">Premieres</span>
+                <strong class="text-sky-400" x-text="fmtStartDate(detail.start_date)"></strong>
+              </div>
+            </template>
+
+            <button @click="doUnfollow(detail.anilist_id); detail = null"
+                    class="text-xs text-red-400 border border-red-900/40 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
+              Unfollow
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Toast -->
+  <div class="fixed bottom-5 right-5 z-[999] px-4 py-2 rounded-lg text-sm font-medium pointer-events-none"
+       x-show="toast.show" x-transition.opacity.duration.200ms
+       :class="toast.type === 'ok'
+         ? 'bg-emerald-950 text-emerald-400 border border-emerald-900'
+         : 'bg-red-950 text-red-400 border border-red-900'"
+       x-text="toast.msg" style="display:none"></div>
+
+</div>
+
+<script>
+function tracker() {
+  return {
+    follows:      {{ follows | tojson }},
+    query:        '',
+    results:      [],
+    focused:      0,
+    activeFilter: 'all',
+    detail:       null,
+    refreshing:   false,
+    toast:        { show: false, msg: '', type: 'ok' },
+
+    filters: [
+      { label: 'All',      value: 'all'      },
+      { label: 'Airing',   value: 'airing'   },
+      { label: 'Finished', value: 'finished' },
+      { label: 'Upcoming', value: 'upcoming' },
+    ],
+
+    init() {
+      document.addEventListener('keydown', e => {
+        if (e.key === '/' && document.activeElement !== this.$refs.searchInput) {
+          e.preventDefault();
+          this.$refs.searchInput.focus();
+        }
+      });
+      setInterval(() => { this.follows = [...this.follows]; }, 30000);
+    },
+
+    get visibleShows() {
+      return this.follows.filter(s => {
+        if (this.activeFilter === 'airing')   return s.status === 'RELEASING';
+        if (this.activeFilter === 'finished') return s.status === 'FINISHED';
+        if (this.activeFilter === 'upcoming') return s.status === 'NOT_YET_RELEASED';
+        return true;
+      });
+    },
+
+    async doSearch() {
+      this.focused = 0;
+      if (this.query.length < 2) { this.results = []; return; }
+      const res = await fetch(`/search?q=${encodeURIComponent(this.query)}`);
+      this.results = await res.json();
+    },
+
+    closeSearch() { this.results = []; this.query = ''; },
+
+    async doFollow(anime) {
+      if (!anime) return;
+      this.closeSearch();
+      await fetch(`/follow/${anime.id}`, { method: 'POST' });
+      this.showToast('Following!');
+      setTimeout(() => location.reload(), 500);
+    },
+
+    async doUnfollow(id) {
+      await fetch(`/follow/${id}`, { method: 'DELETE' });
+      this.follows = this.follows.filter(s => s.anilist_id !== id);
+      this.showToast('Removed');
+    },
+
+    async refreshAll() {
+      this.refreshing = true;
+      await fetch('/refresh', { method: 'POST' });
+      this.showToast('Refreshed');
+      setTimeout(() => location.reload(), 400);
+    },
+
+    openDetail(show) { this.detail = show; },
+
+    fmtDate(ts) {
+      return new Date(ts * 1000).toLocaleDateString('en-SE', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    },
+
+    fmtCountdown(ts) {
+      const diff = ts - Math.floor(Date.now() / 1000);
+      if (diff <= 0) return '🔴 Airing now';
+      const d = Math.floor(diff / 86400);
+      const h = Math.floor((diff % 86400) / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      if (d > 0) return `in ${d}d ${h}h`;
+      if (h > 0) return `in ${h}h ${m}m`;
+      return `in ${m}m`;
+    },
+
+    fmtStartDate(d) {
+      if (!d || !d.year) return 'TBA';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      if (!d.month) return String(d.year);
+      if (!d.day)   return `${months[d.month - 1]} ${d.year}`;
+      return `${months[d.month - 1]} ${d.day}, ${d.year}`;
+    },
+
+    statusDot(s) {
+      return s === 'RELEASING' ? '🟢' : s === 'FINISHED' ? '⚫' : '🔵';
+    },
+
+    statusLabel(s) {
+      if (s === 'RELEASING')         return 'Airing';
+      if (s === 'FINISHED')          return 'Finished';
+      if (s === 'NOT_YET_RELEASED')  return 'Upcoming';
+      return 'TBA';
+    },
+
+    capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+    },
+
+    showToast(msg, type = 'ok') {
+      this.toast = { show: true, msg, type };
+      setTimeout(() => { this.toast.show = false; }, 2200);
+    },
+  };
+}
+</script>
+</body>
+</html>

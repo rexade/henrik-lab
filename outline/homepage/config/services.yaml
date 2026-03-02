@@ -1,0 +1,49 @@
+- Apps:
+    - Brain:
+        href: https://brain.rexthedog.space
+        description: Dump anything, AI files it
+        icon: mdi-brain
+        siteMonitor: https://brain.rexthedog.space
+
+    - Outline:
+        href: https://notes.rexthedog.space
+        description: Notes & knowledge base
+        icon: outline.png
+        siteMonitor: https://notes.rexthedog.space
+
+    - Kanban:
+        href: https://kanban.rexthedog.space
+        description: Task board
+        icon: mdi-view-kanban
+        siteMonitor: http://kanban:8000
+
+    - Receptbok:
+        href: https://recipes.rexthedog.space
+        description: Recept med svenska mått
+        icon: mdi-chef-hat
+        siteMonitor: http://recipes:8000
+
+    - Anime:
+        href: https://anime.rexthedog.space
+        description: Track airing shows
+        icon: mdi-television-play
+        siteMonitor: http://anime:8000
+
+- System:
+    - Uptime Kuma:
+        href: https://status.rexthedog.space
+        description: Service monitoring
+        icon: uptime-kuma.png
+        siteMonitor: https://status.rexthedog.space
+
+    - Files:
+        href: https://files.rexthedog.space
+        description: File storage
+        icon: filebrowser.png
+        siteMonitor: https://files.rexthedog.space
+
+    - Terminal:
+        href: https://ssh.rexthedog.space
+        description: SSH in the browser
+        icon: mdi-console
+        siteMonitor: https://ssh.rexthedog.space

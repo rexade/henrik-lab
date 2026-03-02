@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% block title %}Kanban{% endblock %}
+
+{% block content %}
+{% set col_accents = {'backlog': '#94a3b8', 'next': '#60a5fa', 'doing': '#fb923c', 'done': '#4ade80'} %}
+
+<div x-data="kanban()" x-init="init()" class="flex flex-col h-full min-h-0">
+
+  <!-- ── Mobile column tab bar ────────────────────────────── -->
+  <div class="flex sm:hidden gap-1.5 mb-3 flex-shrink-0">
+    {% for col in columns %}
+    <button class="flex-1 py-2 rounded-lg border-t-2 transition-all text-center"
+            style="border-top-color: {{ col_accents[col] }}"
+            data-tab-col="{{ col }}"
+            :class="dragOverTab === '{{ col }}'
+              ? 'bg-[#252840] text-slate-200 border-[#2d3148] scale-105 ring-2 ring-indigo-500/50'
+              : activeCol === '{{ col }}'
+                ? 'bg-[#1a1d2e] text-slate-200 border-[#2d3148]'
+                : 'bg-[#0c0e18] text-slate-600 border-[#2d3148]'"
+            @click="activeCol = '{{ col }}'">
+      <div class="text-[0.65rem] font-bold uppercase tracking-wider">{{ column_labels[col] }}</div>
+      <div class="text-[0.6rem] text-slate-500 mt-0.5" id="tab-count-{{ col }}">{{ board[col]|length }}</div>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- ── Board ─────────────────────────────────────────────── -->
+  <div class="flex-1 min-h-0 sm:flex sm:gap-3 sm:items-start sm:overflow-x-auto sm:pb-2">
+    {% for col in columns %}
+    {% set accent = col_accents[col] %}
+
+    <div class="hidden sm:flex flex-col h-full sm:flex-none sm:w-[272px]
+                rounded-xl border border-[#2d3148] bg-[#1a1d2e] overflow-hidden"
+         :class="{'!flex': activeCol === '{{ col }}'}"
+         data-column="{{ col }}">
+
+      <!-- Column header (desktop only — mobile uses tab bar) -->
+      <div class="hidden sm:flex items-center justify-between px-4 py-3
+                  border-b border-[#2d3148] flex-shrink-0 border-t-[3px]"
+           style="border-top-color: {{ accent }}">
+        <span class="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">{{ column_labels[col] }}</span>
+        <span class="min-w-[22px] h-[22px] px-2 rounded-full text-[0.7rem] bg-[#252840] text-slate-500
+                     font-semibold inline-flex items-center justify-center"
+              id="count-{{ col }}">{{ board[col]|length }}</span>
+      </div>
+
+      <!-- Card list -->
+      <ul class="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none
+                 [scrollbar-width:thin] [scrollbar-color:#2d3148_transparent]"
+          id="col-{{ col }}" data-column="{{ col }}">
+        {% for card in board[col] %}
+        <li class="bg-[#0f1117] border border-[#2d3148] rounded-xl flex items-start gap-2.5
+                   px-3 py-3 sm:py-2.5 cursor-pointer active:scale-[0.98]
+                   hover:border-[#3d4261] hover:shadow-[0_6px_20px_rgba(0,0,0,.4)]
+                   transition-all duration-150 touch-manipulation"
+            data-id="{{ card.id }}"
+            data-title="{{ card.title | e }}"
+            data-description="{{ card.description | e }}"
+            @click="onCardClick($event, '{{ card.id }}', $el)">
+          <div class="card-drag-handle text-[#3d4261] hover:text-slate-500 cursor-grab
+                      active:cursor-grabbing flex-shrink-0 text-lg leading-snug pt-0.5
+                      select-none transition-colors"
+               title="Drag to move">⠿</div>
+          <div class="card-body flex-1 min-w-0">
+            <div class="card-title text-[0.875rem] font-medium text-slate-200 leading-snug break-words">{{ card.title }}</div>
+            {% if card.description %}
+            <div class="card-desc text-[0.75rem] text-slate-500 mt-1 line-clamp-2">{{ card.description }}</div>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <!-- Add card area -->
+      <div class="flex-shrink-0 p-2 border-t border-[#2d3148]">
+        <template x-if="addingIn !== '{{ col }}'">
+          <button class="w-full text-left px-3 py-3 sm:py-2 text-slate-600 text-[0.85rem]
+                         rounded-lg hover:bg-[#252840] hover:text-slate-400 transition-colors
+                         touch-manipulation"
+                  @click="showAdd('{{ col }}')">+ Add card</button>
+        </template>
+        <template x-if="addingIn === '{{ col }}'">
+          <form class="flex flex-col gap-2"
+                @submit.prevent="submitAdd('{{ col }}')"
+                @keyup.escape="hideAdd()">
+            <input class="w-full px-3 py-2.5 bg-[#0f1117] border border-indigo-500 rounded-lg
+                          text-[0.9rem] text-slate-200 placeholder-[#3d4261] outline-none
+                          ring-2 ring-indigo-500/20"
+                   type="text" x-ref="addInput{{ col }}"
+                   x-model="addTitle" placeholder="Card title…" autocomplete="off">
+            <div class="flex gap-2">
+              <button type="submit"
+                      class="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500
+                             text-white text-[0.85rem] font-medium rounded-lg transition-colors
+                             touch-manipulation">
+                Add
+              </button>
+              <button type="button"
+                      class="flex-1 sm:flex-none px-4 py-2.5 bg-[#252840] hover:bg-[#2d3148]
+                             text-slate-400 text-[0.85rem] rounded-lg transition-colors
+                             touch-manipulation"
+                      @click="hideAdd()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </template>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Edit modal / bottom sheet ────────────────────────── -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]
+              flex items-end sm:items-center justify-center sm:p-4"
+       x-show="modal.open"
+       x-transition:enter="overlay-enter"
+       x-transition:enter-start="overlay-enter-start"
+       x-transition:enter-end="overlay-enter-end"
+       x-transition:leave="overlay-leave"
+       x-transition:leave-start="overlay-leave-start"
+       x-transition:leave-end="overlay-leave-end"
+       @click.self="closeModal()"
+       @keyup.escape.window="closeModal()"
+       style="display:none">
+
+    <div class="w-full sm:max-w-md bg-[#1a1d2e] border border-[#2d3148]
+                rounded-t-2xl sm:rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,.7)]
+                flex flex-col gap-4 p-5 sm:p-6 pb-8 sm:pb-6"
+         x-trap.inert="modal.open"
+         x-show="modal.open"
+         x-transition:enter="sheet-enter"
+         x-transition:enter-start="sheet-enter-start"
+         x-transition:enter-end="sheet-enter-end"
+         x-transition:leave="sheet-leave"
+         x-transition:leave-start="sheet-leave-start"
+         x-transition:leave-end="sheet-leave-end"
+         role="dialog" aria-modal="true">
+
+      <!-- Drag handle pill (mobile only) -->
+      <div class="sm:hidden w-10 h-1 bg-[#3d4261] rounded-full mx-auto -mt-1 mb-1"></div>
+
+      <h2 class="text-[1rem] font-semibold text-slate-100 tracking-tight">Edit card</h2>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[0.7rem] font-semibold text-slate-500 uppercase tracking-wider">Title</label>
+        <input class="w-full px-3 py-3 sm:py-2 bg-[#0f1117] border border-[#2d3148]
+                      focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20
+                      rounded-lg text-[0.9rem] text-slate-200 placeholder-slate-600
+                      outline-none transition-all"
+               type="text" x-model="modal.title" autocomplete="off">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[0.7rem] font-semibold text-slate-500 uppercase tracking-wider">Description</label>
+        <textarea class="w-full px-3 py-3 sm:py-2 bg-[#0f1117] border border-[#2d3148]
+                         focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20
+                         rounded-lg text-[0.9rem] text-slate-200 placeholder-slate-600
+                         outline-none transition-all resize-none sm:resize-y"
+                  x-model="modal.description" rows="3" placeholder="Optional notes…"></textarea>
+      </div>
+
+      <!-- Move to column -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[0.7rem] font-semibold text-slate-500 uppercase tracking-wider">Move to</label>
+        <div class="grid grid-cols-4 gap-1.5">
+          {% for col in columns %}
+          <button class="py-2 rounded-lg text-[0.7rem] font-semibold uppercase tracking-wide
+                         transition-colors touch-manipulation border"
+                  style="border-color: {{ col_accents[col] }}22"
+                  :class="modal.column === '{{ col }}'
+                    ? 'text-white'
+                    : 'text-slate-500 bg-[#0f1117] hover:text-slate-300'"
+                  :style="modal.column === '{{ col }}' ? 'background: {{ col_accents[col] }}33; border-color: {{ col_accents[col] }}88; color: {{ col_accents[col] }}' : ''"
+                  @click="modal.column = '{{ col }}'">
+            {{ column_labels[col] }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="flex gap-2 items-center pt-1">
+        <button class="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-indigo-600 hover:bg-indigo-500
+                       text-white text-[0.9rem] font-medium rounded-lg transition-colors
+                       touch-manipulation"
+                @click="saveCard()">Save</button>
+        <button class="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-[#252840] hover:bg-[#2d3148]
+                       text-slate-300 text-[0.9rem] rounded-lg transition-colors touch-manipulation"
+                @click="closeModal()">Cancel</button>
+        <button class="px-4 py-3 sm:py-2 border border-red-900/40 hover:bg-red-950/60 text-red-400
+                       text-[0.9rem] rounded-lg transition-colors touch-manipulation ml-auto"
+                @click="deleteCard()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+function kanban() {
+  return {
+    addingIn:  null,
+    addTitle:  '',
+    activeCol: '{{ columns[0] }}',
+    modal:       { open: false, id: null, title: '', description: '', column: '' },
+    dragging:    false,
+    dragOverTab: null,
+
+    init() {
+      document.querySelectorAll('[id^="col-"]').forEach(list => {
+        Sortable.create(list, {
+          group:                'kanban',
+          animation:            150,
+          easing:               'cubic-bezier(1, 0, 0, 1)',
+          handle:               '.card-drag-handle',
+          ghostClass:           'card-ghost',
+          chosenClass:          'card-chosen',
+          dragClass:            'card-dragging',
+          emptyInsertThreshold: 8,
+          delay:                200,
+          delayOnTouchOnly:     true,
+
+          onStart: () => {
+            document.body.style.cursor = 'grabbing';
+            this.dragging    = true;
+            this.dragOverTab = null;
+
+            const checkPos = (pt) => {
+              let found = null;
+              document.querySelectorAll('[data-tab-col]').forEach(tab => {
+                const r = tab.getBoundingClientRect();
+                if (pt.clientX >= r.left && pt.clientX <= r.right &&
+                    pt.clientY >= r.top  && pt.clientY <= r.bottom) {
+                  found = tab.dataset.tabCol;
+                }
+              });
+              this.dragOverTab = found;
+            };
+
+            const onMove = (e) => checkPos(e.touches ? e.touches[0] : e);
+            const onUp   = (e) => {
+              checkPos(e.changedTouches ? e.changedTouches[0] : e);
+              window.removeEventListener('touchmove', onMove);
+              window.removeEventListener('touchend',  onUp);
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup',   onUp);
+            };
+            window._kbCleanup = () => {
+              window.removeEventListener('touchmove', onMove);
+              window.removeEventListener('touchend',  onUp);
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup',   onUp);
+            };
+            window.addEventListener('touchmove', onMove, { passive: true });
+            window.addEventListener('touchend',  onUp,  { passive: true });
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup',   onUp);
+          },
+
+          onEnd: async (evt) => {
+            document.body.style.cursor = '';
+            this.dragging = false;
+            if (window._kbCleanup) { window._kbCleanup(); window._kbCleanup = null; }
+
+            const targetTab = this.dragOverTab;
+            this.dragOverTab = null;
+
+            if (targetTab) {
+              // Dropped onto a tab — move card to that column
+              const cardId  = evt.item.dataset.id;
+              const fromCol = evt.from.dataset.column;
+              // Ensure item is back in its origin list (sortable may have moved it)
+              if (!evt.from.contains(evt.item)) evt.from.appendChild(evt.item);
+              if (targetTab !== fromCol) {
+                await fetch('/api/cards/' + cardId, {
+                  method:  'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body:    JSON.stringify({ column: targetTab }),
+                });
+                document.getElementById('col-' + targetTab)?.appendChild(evt.item);
+                this.activeCol = targetTab;
+              }
+            } else {
+              // Normal reorder within / between lists
+              const col   = evt.to.dataset.column;
+              const order = [...evt.to.querySelectorAll('[data-id]')].map(el => el.dataset.id);
+              await fetch('/api/reorder', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ column: col, order }),
+              });
+            }
+            this.refreshCounts();
+          },
+        });
+      });
+    },
+
+    onCardClick(evt, id, li) {
+      if (evt.target.closest('.card-drag-handle')) return;
+      const col = li.closest('[data-column]')?.dataset.column || '';
+      this.modal = {
+        open:        true,
+        id,
+        title:       li.dataset.title,
+        description: li.dataset.description || '',
+        column:      col,
+      };
+    },
+
+    closeModal() { this.modal.open = false; },
+
+    async saveCard() {
+      const { id, title, description, column } = this.modal;
+      if (!title.trim()) return;
+      const li = document.querySelector(`[data-id="${id}"]`);
+      const oldCol = li?.closest('[data-column]')?.dataset.column;
+
+      await fetch('/api/cards/' + id, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: title.trim(), description: description.trim(), column }),
+      });
+
+      if (li) {
+        li.dataset.title       = title.trim();
+        li.dataset.description = description.trim();
+        li.querySelector('.card-title').textContent = title.trim();
+        const existingDesc = li.querySelector('.card-desc');
+        if (description.trim()) {
+          if (existingDesc) {
+            existingDesc.textContent = description.trim();
+          } else {
+            const d = document.createElement('div');
+            d.className   = 'card-desc text-[0.75rem] text-slate-500 mt-1 line-clamp-2';
+            d.textContent = description.trim();
+            li.querySelector('.card-body').appendChild(d);
+          }
+        } else if (existingDesc) {
+          existingDesc.remove();
+        }
+
+        // Move card to new column if changed
+        if (column && column !== oldCol) {
+          document.getElementById('col-' + column)?.appendChild(li);
+          this.activeCol = column;
+        }
+      }
+      this.closeModal();
+      this.refreshCounts();
+    },
+
+    async deleteCard() {
+      const id = this.modal.id;
+      await fetch('/api/cards/' + id, { method: 'DELETE' });
+      document.querySelector(`[data-id="${id}"]`)?.remove();
+      this.closeModal();
+      this.refreshCounts();
+    },
+
+    showAdd(col) {
+      this.addingIn = col;
+      this.addTitle = '';
+      this.$nextTick(() => {
+        document.getElementById('col-' + col)
+          ?.closest('[data-column]')
+          ?.querySelector('input[x-model="addTitle"]')
+          ?.focus();
+      });
+    },
+
+    hideAdd() { this.addingIn = null; this.addTitle = ''; },
+
+    async submitAdd(col) {
+      const title = this.addTitle.trim();
+      if (!title) return;
+      const resp = await fetch('/api/cards', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title, column: col }),
+      });
+      const card = await resp.json();
+      const list = document.getElementById('col-' + col);
+      const li   = document.createElement('li');
+      li.className = 'bg-[#0f1117] border border-[#2d3148] rounded-xl flex items-start gap-2.5 px-3 py-3 sm:py-2.5 cursor-pointer active:scale-[0.98] hover:border-[#3d4261] hover:shadow-[0_6px_20px_rgba(0,0,0,.4)] transition-all duration-150 touch-manipulation';
+      li.dataset.id          = card.id;
+      li.dataset.title       = card.title;
+      li.dataset.description = card.description || '';
+      li.innerHTML = `
+        <div class="card-drag-handle text-[#3d4261] hover:text-slate-500 cursor-grab active:cursor-grabbing flex-shrink-0 text-lg leading-snug pt-0.5 select-none transition-colors" title="Drag to move">⠿</div>
+        <div class="card-body flex-1 min-w-0">
+          <div class="card-title text-[0.875rem] font-medium text-slate-200 leading-snug break-words">${escHtml(card.title)}</div>
+        </div>`;
+      li.addEventListener('click', e => {
+        if (e.target.closest('.card-drag-handle')) return;
+        this.modal = { open: true, id: card.id, title: card.title, description: '' };
+      });
+      list.appendChild(li);
+      this.hideAdd();
+      this.refreshCounts();
+    },
+
+    refreshCounts() {
+      document.querySelectorAll('[data-column]').forEach(col => {
+        const name  = col.dataset.column;
+        const count = col.querySelectorAll('[data-id]').length;
+        const badge = document.getElementById('count-' + name);
+        const tabBadge = document.getElementById('tab-count-' + name);
+        if (badge) badge.textContent = count;
+        if (tabBadge) tabBadge.textContent = count;
+      });
+    },
+  };
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

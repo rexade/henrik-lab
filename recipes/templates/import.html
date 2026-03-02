@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Importera recept{% endblock %}
+{% block content %}
+
+<div class="form-page">
+  <div class="breadcrumb">
+    <a href="/">← Alla recept</a>
+  </div>
+  <h1>Importera recept</h1>
+
+  {% if error %}
+  <div class="error-banner">{{ error }}</div>
+  {% endif %}
+
+  <div class="recipe-form" x-data="{ mode: 'url', loading: false }">
+
+    <div class="form-section">
+      <div class="tab-bar">
+        <button type="button" class="tab" :class="{ 'tab-active': mode === 'url' }" @click="mode = 'url'">🔗 Klistra in URL</button>
+        <button type="button" class="tab" :class="{ 'tab-active': mode === 'image' }" @click="mode = 'image'">📷 Ladda upp bild</button>
+      </div>
+
+      <form method="post" action="/ingest" enctype="multipart/form-data" @submit="loading = true">
+
+        <div x-show="mode === 'url'" class="form-group">
+          <label for="source_url">Receptets URL</label>
+          <input type="url" id="source_url" name="source_url" class="form-control"
+                 placeholder="https://www.koket.se/recept/...">
+        </div>
+
+        <div x-show="mode === 'image'" class="form-group">
+          <label for="image">Foto av receptet</label>
+          <input type="file" id="image" name="image" class="form-control"
+                 accept="image/*" capture="environment">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
+            <span x-show="!loading">✨ Importera med AI</span>
+            <span x-show="loading" x-cloak>Analyserar… ⏳</span>
+          </button>
+          <a href="/" class="btn btn-secondary">Avbryt</a>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="form-section import-hint">
+      <h2>Så här fungerar det</h2>
+      <p>Klistra in en URL från t.ex. Köket, ICA eller Arla — eller ta ett foto av en kokbokssida. AI:n extraherar titel, ingredienser och steg automatiskt. Du får granska och justera allt innan det sparas.</p>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{% if recipe %}Redigera recept{% else %}Nytt recept{% endif %} – Receptboken{% endblock %}
+{% block content %}
+
+<div class="form-page">
+  <h1>{% if recipe %}Redigera recept{% else %}Nytt recept{% endif %}</h1>
+
+  <form method="post" action="{% if recipe %}/edit/{{ recipe.id }}{% else %}/add{% endif %}" id="recipe-form">
+
+    <fieldset>
+      <legend>Grundinfo</legend>
+      <div class="field">
+        <label for="title">Namn på receptet *</label>
+        <input type="text" id="title" name="title" value="{{ recipe.title if recipe else '' }}" required placeholder="T.ex. Köttbullar med gräddsås">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="category">Kategori</label>
+          <select id="category" name="category">
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if recipe and recipe.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="servings">Portioner</label>
+          <input type="number" id="servings" name="servings" value="{{ recipe.servings if recipe else 4 }}" min="1" max="100">
+        </div>
+      </div>
+      <div class="field">
+        <label for="description">Kort beskrivning</label>
+        <input type="text" id="description" name="description" value="{{ recipe.description if recipe else '' }}" placeholder="Valfri kortbeskrivning">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ingredienser</legend>
+      <div id="ingredients">
+        {% if recipe and ingredients %}
+          {% for ing in ingredients %}
+          <div class="ingredient-row">
+            <input type="text" name="ing_amount" value="{{ ing.amount }}" placeholder="Mängd" class="amount-field">
+            <select name="ing_unit">
+              <option value="">–</option>
+              {% for u in units %}
+              <option value="{{ u }}" {% if ing.unit == u %}selected{% endif %}>{{ u }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="ing_name" value="{{ ing.name }}" placeholder="Ingrediens" class="name-field" required>
+            <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="ingredient-row">
+            <input type="text" name="ing_amount" placeholder="Mängd" class="amount-field">
+            <select name="ing_unit">
+              <option value="">–</option>
+              {% for u in units %}
+              <option value="{{ u }}">{{ u }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="ing_name" placeholder="Ingrediens" class="name-field">
+            <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>
+          </div>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-ghost" onclick="addIngredient()">+ Lägg till ingrediens</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tillagning</legend>
+      <div id="steps">
+        {% if recipe and steps %}
+          {% for step in steps %}
+          <div class="step-row">
+            <span class="step-num">{{ loop.index }}</span>
+            <textarea name="step_desc" rows="2" placeholder="Beskriv steget…">{{ step.description }}</textarea>
+            <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="step-row">
+            <span class="step-num">1</span>
+            <textarea name="step_desc" rows="2" placeholder="Beskriv steget…"></textarea>
+            <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>
+          </div>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-ghost" onclick="addStep()">+ Lägg till steg</button>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-large">💾 Spara recept</button>
+      <a href="{% if recipe %}/recipe/{{ recipe.id }}{% else %}/{% endif %}" class="btn btn-ghost">Avbryt</a>
+    </div>
+  </form>
+</div>
+
+<template id="ing-template">
+  <div class="ingredient-row">
+    <input type="text" name="ing_amount" placeholder="Mängd" class="amount-field">
+    <select name="ing_unit">
+      <option value="">–</option>
+      {% for u in units %}
+      <option value="{{ u }}">{{ u }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="ing_name" placeholder="Ingrediens" class="name-field">
+    <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>
+  </div>
+</template>
+
+<script>
+function addIngredient() {
+  const tmpl = document.getElementById('ing-template').content.cloneNode(true);
+  document.getElementById('ingredients').appendChild(tmpl);
+}
+function addStep() {
+  const container = document.getElementById('steps');
+  const num = container.querySelectorAll('.step-row').length + 1;
+  const div = document.createElement('div');
+  div.className = 'step-row';
+  div.innerHTML = `<span class="step-num">${num}</span>
+    <textarea name="step_desc" rows="2" placeholder="Beskriv steget…"></textarea>
+    <button type="button" class="btn btn-ghost remove-btn" onclick="removeRow(this)">✕</button>`;
+  container.appendChild(div);
+}
+function removeRow(btn) {
+  btn.closest('.ingredient-row, .step-row').remove();
+  // renumber steps
+  document.querySelectorAll('.step-row').forEach((row, i) => {
+    const num = row.querySelector('.step-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+</script>
+{% endblock %}
