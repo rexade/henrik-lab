@@ -1,34 +1,32 @@
 # Henrik's Lab
 
-A self-hosted personal dashboard and knowledge management system running on a Raspberry Pi. All services are containerised with Docker Compose and exposed securely to the internet via a Cloudflare Tunnel — no open ports required.
+A self-hosted personal dashboard running on a Raspberry Pi. All services are containerised with Docker Compose and exposed securely via a Cloudflare Tunnel — no open ports required.
 
 <img width="2412" height="1092" alt="image" src="https://github.com/user-attachments/assets/754b6ae8-a11d-4b39-9787-ad7ed94c2844" />
-
 
 Live at **[home.rexthedog.space](https://home.rexthedog.space)**
 
 ---
 
-## Architecture overview
+## Architecture
 
 ```
 Internet
   └─ Cloudflare Tunnel (cloudflared)
        └─ All traffic → localhost only
             │
-            ├─ home.rexthedog.space        → Homepage (8080)
-            ├─ notes.rexthedog.space       → Outline wiki (3000)
-            ├─ brain.rexthedog.space       → Brain / AI ingestor (8085)
-            ├─ recipes.rexthedog.space     → Receptbok (8084)
-            ├─ vault.rexthedog.space       → Vaultwarden (8082)
-            ├─ status.rexthedog.space      → Uptime Kuma (3001)
-            ├─ portainer.rexthedog.space   → Portainer (9000)
-            ├─ terminal.rexthedog.space    → Wetty / Web SSH (3002)
-            ├─ files.rexthedog.space       → FileBrowser (8083)
-            └─ ssh.rexthedog.space         → SSH (22)
+            ├─ home.rexthedog.space    → Homepage     (8080)
+            ├─ notes.rexthedog.space   → Outline wiki (3000)
+            ├─ brain.rexthedog.space   → Brain        (8085)
+            ├─ recipes.rexthedog.space → Receptbok    (8084)
+            ├─ kanban.rexthedog.space  → Kanban       (8086)
+            ├─ anime.rexthedog.space   → Anime        (8087)
+            ├─ status.rexthedog.space  → Uptime Kuma  (3001)
+            ├─ files.rexthedog.space   → FileBrowser  (8083)
+            └─ ssh.rexthedog.space     → SSH browser  (22)
 ```
 
-No nginx or reverse proxy runs on the host. The Cloudflare Tunnel daemon handles TLS termination and routing entirely.
+No reverse proxy on the host. Cloudflare Tunnel handles TLS termination and routing entirely.
 
 ---
 
@@ -38,13 +36,12 @@ No nginx or reverse proxy runs on the host. The Cloudflare Tunnel daemon handles
 |---|---|---|---|
 | **Homepage** | `ghcr.io/gethomepage/homepage` | 8080 | Central dashboard |
 | **Outline** | `outlinewiki/outline` | 3000 | Wiki & knowledge base |
-| **Brain** | `./brain` (custom) | 8085 | AI content ingestor |
-| **Receptbok** | `./recipes` (custom) | 8084 | Swedish recipe manager |
-| **Vaultwarden** | `vaultwarden/server` | 8082 | Password manager (Bitwarden-compatible) |
+| **Brain** | `./brain` (custom) | 8085 | AI content ingestor → Outline |
+| **Receptbok** | `./recipes` (custom) | 8084 | Swedish recipe manager with AI import |
+| **Kanban** | `./kanban` (custom) | 8086 | Personal task board |
+| **Anime** | `./anime` (custom) | 8087 | Anime watchlist tracker (AniList) |
 | **Uptime Kuma** | `louislam/uptime-kuma` | 3001 | Service health monitoring |
-| **Portainer** | `portainer/portainer-ce` | 9000 | Docker container management |
-| **Wetty** | `wettyoss/wetty` | 3002 | SSH terminal in the browser |
-| **FileBrowser** | `filebrowser/filebrowser` | 8083 | Web-based file manager |
+| **FileBrowser** | `./filebrowser` (custom) | 8083 | Web-based file manager |
 | **PostgreSQL** | `postgres:16-alpine` | internal | Outline database |
 | **Redis** | `redis:7-alpine` | internal | Outline session cache |
 | **MinIO** | `minio/minio` | internal | S3-compatible file storage for Outline |
@@ -55,24 +52,24 @@ No nginx or reverse proxy runs on the host. The Cloudflare Tunnel daemon handles
 
 ### Brain (`./brain`)
 
-An AI-powered content ingestion pipeline. Drop in anything — a URL, a YouTube link, a PDF, an image, or raw text — and it extracts, distils, and organises it into your Outline wiki automatically.
+Paste a URL, YouTube link, PDF, image, or raw text — Brain extracts, distils, and files it into your Outline wiki automatically.
 
-**How it works:**
+**Pipeline:**
 
-1. **Extract** — handles URLs (web scraping), YouTube (transcript via `yt-dlp`), PDFs (`pypdf`), images (Claude OCR), and plain text
-2. **Chunk** — splits large documents into 150 KB sections with 3 KB overlap
-3. **Summarise** — for multi-chunk documents, each section is summarised first
-4. **Distil** — Claude Opus 4.6 produces structured JSON: title, topic, tier (A/B/C quality), TL;DR, key points, and clean markdown
-5. **Publish** — two documents are created in Outline:
+1. **Extract** — URLs (scraping), YouTube (transcript via `yt-dlp`), PDFs (`pypdf`), images (Claude vision), plain text
+2. **Chunk** — splits large content into 150 KB sections with 3 KB overlap
+3. **Summarise** — each chunk is summarised individually for long documents
+4. **Distil** — Claude Opus 4.6 produces structured JSON: title, topic, tier (A/B/C), TL;DR, key points, clean markdown
+5. **Publish** — two documents created in Outline:
    - `📥 Inbox` — raw import for reference
-   - `📚 Library` — cleaned, structured content filed under the correct topic
+   - `📚 Library` — clean structured note, filed under the correct topic collection
 
 **Endpoints:**
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Dashboard showing recent jobs |
-| `POST` | `/ingest` | Submit content (text, URL, or file upload) |
+| `GET` | `/` | Dashboard with recent jobs |
+| `POST` | `/ingest` | Submit a URL, text, or file |
 | `GET` | `/job/{id}` | Live job progress page |
 | `GET` | `/api/job/{id}` | Job status as JSON |
 
@@ -81,23 +78,23 @@ An AI-powered content ingestion pipeline. Drop in anything — a URL, a YouTube 
 | Variable | Description |
 |---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API key |
-| `OUTLINE_URL` | Internal Outline URL (e.g. `http://outline:3000`) |
-| `OUTLINE_TOKEN` | Outline API token (create under Settings → API) |
+| `OUTLINE_URL` | Internal Outline URL (`http://outline:3000`) |
+| `OUTLINE_TOKEN` | Outline API token (Settings → API → Create token) |
 
 ---
 
 ### Receptbok (`./recipes`)
 
-A personal recipe database with AI-powered import. Paste a recipe URL or photograph a recipe card, and Claude extracts it into structured form ready to review and save.
+Recipe database with AI-powered import. Paste a URL or photograph a recipe card and Claude extracts it into structured form.
 
-The entire UI is in Swedish. Categories use Swedish cooking terminology (Frukost, Middag, Bakning, etc.) and units match Swedish kitchen standards (krm, tsk, msk, dl).
+The UI is in Swedish. Categories and units follow Swedish kitchen conventions (krm, tsk, msk, dl, etc.).
 
 **Endpoints:**
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/` | Browse and search recipes |
-| `GET/POST` | `/new` | Create recipe manually |
+| `GET/POST` | `/new` | Create a recipe manually |
 | `GET/POST` | `/edit/{id}` | Edit a recipe |
 | `GET/POST` | `/ingest` | Import from URL or image via Claude |
 | `GET/POST` | `/delete/{id}` | Delete a recipe |
@@ -110,9 +107,25 @@ The entire UI is in Swedish. Categories use Swedish cooking terminology (Frukost
 
 ---
 
+### Kanban (`./kanban`)
+
+Minimal personal task board. Four fixed columns: **Backlog → Next → Doing → Done**. Cards have a title and optional description. Data stored in SQLite.
+
+No environment variables required.
+
+---
+
+### Anime (`./anime`)
+
+Watchlist tracker backed by the [AniList](https://anilist.co) public GraphQL API. Search for shows, follow them, and see which episodes are airing. Follows stored locally in JSON.
+
+No environment variables required.
+
+---
+
 ## Authentication
 
-**Outline** uses Cloudflare Access as an OIDC provider, so login is handled by Cloudflare Zero Trust. No separate user accounts needed — access is granted or denied at the Cloudflare level before a request ever reaches the server.
+Outline uses Cloudflare Access as an OIDC provider. Login is handled by Cloudflare Zero Trust — no separate user accounts needed.
 
 ---
 
@@ -120,12 +133,12 @@ The entire UI is in Swedish. Categories use Swedish cooking terminology (Frukost
 
 ### Prerequisites
 
-- Raspberry Pi (or any Linux machine) with Docker and Docker Compose installed
-- A domain with Cloudflare DNS
+- Raspberry Pi (or any Linux box) with Docker and Docker Compose
+- A domain on Cloudflare DNS
 - An Anthropic API key
 - A Cloudflare account with Zero Trust enabled (free tier works)
 
-### 1. Clone the repo
+### 1. Clone
 
 ```bash
 git clone https://github.com/rexade/henrik-lab.git
@@ -135,21 +148,21 @@ cd henrik-lab
 ### 2. Configure secrets
 
 ```bash
-cp .env.example .env
-# Edit .env and fill in all values
-nano .env
+cp outline/.env.example outline/.env
+# Fill in all values
+nano outline/.env
 ```
 
 Generate the Outline secret keys:
 
 ```bash
-openssl rand -hex 32   # run twice — once for SECRET_KEY, once for UTILS_SECRET
+openssl rand -hex 32   # run twice: once for SECRET_KEY, once for UTILS_SECRET
 ```
 
 ### 3. Set up Cloudflare Tunnel
 
 ```bash
-# Install cloudflared
+# Install cloudflared (ARM64)
 curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o cloudflared.deb
 sudo dpkg -i cloudflared.deb
 
@@ -157,72 +170,65 @@ sudo dpkg -i cloudflared.deb
 cloudflared tunnel login
 cloudflared tunnel create henrik-lab
 
-# Copy and edit the tunnel config
+# Configure the tunnel — edit with your tunnel ID and domain
 mkdir -p ~/.cloudflared
-cp cloudflare/config.yml.example ~/.cloudflared/config.yml
-# Edit config.yml — replace YOUR_TUNNEL_ID and your domain
+nano ~/.cloudflared/config.yml
 
-# Create DNS records (one per subdomain)
+# Add a DNS record for each subdomain
 cloudflared tunnel route dns henrik-lab home.yourdomain.com
 cloudflared tunnel route dns henrik-lab notes.yourdomain.com
-# ... repeat for each subdomain
+cloudflared tunnel route dns henrik-lab brain.yourdomain.com
+# ... repeat for each service
 
-# Install as a system service
+# Run as a system service
 sudo cloudflared service install
 sudo systemctl start cloudflared
 ```
 
-### 4. Start everything
+### 4. Start the stack
 
 ```bash
+cd outline
 docker compose up -d
 ```
 
-### 5. First-run Outline setup
+### 5. First-run: get the Outline API token
 
-After the stack is up, get your Outline API token:
+Brain needs an Outline API token to publish notes:
 
-1. Go to `https://notes.yourdomain.com`
-2. Sign in via Cloudflare
-3. Go to **Settings → API → Create token**
-4. Copy the token into your `.env` as `OUTLINE_TOKEN`
-5. Restart the brain service: `docker compose restart brain`
+1. Go to `https://notes.yourdomain.com` and sign in
+2. **Settings → API → Create token**
+3. Add it to `outline/.env` as `OUTLINE_TOKEN`
+4. `docker compose restart brain`
 
 ---
 
-## Directory structure
+## Repo structure
 
 ```
 henrik-lab/
-├── docker-compose.yml          # Full stack definition (secrets via .env)
-├── .env.example                # Template for secrets — copy to .env
-├── .gitignore
+├── outline/
+│   ├── docker-compose.yml      # Full stack (secrets loaded from .env)
+│   ├── .env.example            # Secret template — copy to .env
+│   └── homepage/config/        # Homepage dashboard config (YAML)
 │
 ├── brain/                      # AI content ingestor
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── main.py                 # FastAPI app + job queue
-│   ├── pipeline.py             # Extraction → chunking → distillation → publish
-│   ├── outline_client.py       # Outline REST API client
-│   ├── templates/              # Jinja2 HTML templates
-│   └── static/                 # CSS
+│   ├── main.py                 # FastAPI app + async job queue
+│   ├── pipeline.py             # Extract → chunk → summarise → distil → publish
+│   └── outline_client.py       # Outline REST API client
 │
 ├── recipes/                    # Swedish recipe manager
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── main.py                 # FastAPI app (CRUD + AI import)
-│   ├── templates/
-│   └── static/
+│   └── main.py                 # FastAPI CRUD + AI import
 │
-├── homepage/
-│   └── config/
-│       ├── settings.yaml       # Dashboard theme and layout
-│       ├── services.yaml       # Service links and monitoring
-│       ├── widgets.yaml        # Widgets (clock, resources, search)
-│       └── bookmarks.yaml      # Quick-access bookmarks
+├── kanban/                     # Task board
+│   └── main.py                 # FastAPI + SQLite
 │
-└── cloudflare/
-    └── config.yml.example      # Cloudflare Tunnel config template
+├── anime/                      # Anime tracker
+│   └── main.py                 # FastAPI + AniList GraphQL
+│
+└── filebrowser/                # FileBrowser with nginx proxy
+    ├── Dockerfile
+    └── nginx.conf
 ```
 
 ---
@@ -230,21 +236,19 @@ henrik-lab/
 ## Useful commands
 
 ```bash
-# View all running containers
+# Run from the outline/ directory
+
+# View running containers
 docker compose ps
 
-# Follow logs for a specific service
+# Stream logs for a service
 docker compose logs -f brain
 
-# Rebuild and restart a custom service after code changes
+# Rebuild a custom service after code changes
 docker compose up -d --build brain
-docker compose up -d --build recipes
 
-# Stop everything
-docker compose down
-
-# Stop everything and remove volumes (destructive — loses all data)
-docker compose down -v
+# Restart a service
+docker compose restart recipes
 ```
 
 ---
@@ -253,9 +257,9 @@ docker compose down -v
 
 - **Runtime:** Docker Compose on Raspberry Pi (ARM64)
 - **Networking:** Cloudflare Tunnel (zero open ports)
-- **Auth:** Cloudflare Access (OIDC)
-- **Custom services:** Python 3.12, FastAPI, Uvicorn
+- **Auth:** Cloudflare Access (OIDC) for Outline
+- **Custom services:** Python 3.12 · FastAPI · Uvicorn · Jinja2
 - **AI:** Anthropic Claude Opus 4.6 (multi-modal)
-- **Database:** PostgreSQL 16
+- **Database:** PostgreSQL 16 · SQLite (kanban, anime)
 - **Cache:** Redis 7
 - **Object storage:** MinIO (S3-compatible)
